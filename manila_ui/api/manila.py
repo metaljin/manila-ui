@@ -262,9 +262,20 @@ def share_delete_metadata(request, share_id, keys):
 
 def tenant_quota_get(request, tenant_id):
     return base.QuotaSet(manilaclient(request).quotas.get(tenant_id))
+def _map_quota_names_for_update(data):
+    mapping = {
+        'share_gigabytes': 'gigabytes',
+        'share_snapshots': 'snapshots',
+        'share_snapshot_gigabytes': 'snapshot_gigabytes',
+    }
+    for k, v in mapping.items():
+        if k in data:
+            data[v] = data.pop(k)
+    return data
 
 
 def tenant_quota_update(request, tenant_id, **kwargs):
+    _map_quota_names_for_update(kwargs)
     return manilaclient(request).quotas.update(tenant_id, **kwargs)
 
 
@@ -273,6 +284,7 @@ def default_quota_get(request, tenant_id):
 
 
 def default_quota_update(request, **kwargs):
+    _map_quota_names_for_update(kwargs)
     manilaclient(request).quota_classes.update(DEFAULT_QUOTA_NAME, **kwargs)
 
 
