@@ -26,7 +26,6 @@ from horizon import exceptions
 from horizon import tables
 
 from manila_ui.api import manila
-from openstack_dashboard.usage import quotas
 
 
 DELETABLE_STATES = ("available", "error")
@@ -60,8 +59,13 @@ class CreateSnapshot(tables.LinkAction):
         return {"project_id": project_id}
 
     def allowed(self, request, share=None):
-        usages = quotas.tenant_quota_usages(request)
-        if usages['snapshots']['available'] <= 0:
+        usages = manila.tenant_absolute_limits(request)
+        snapshots_allowed = (usages['maxTotalShareSnapshots'] >
+                             usages['totalShareSnapshotsUsed'] and
+                             usages['maxTotalSnapshotGigabytes'] >
+                             usages['totalSnapshotGigabytesUsed'])
+
+        if not snapshots_allowed:
             if "disabled" not in self.classes:
                 self.classes = [c for c in self.classes] + ['disabled']
                 self.verbose_name = string_concat(self.verbose_name, ' ',
