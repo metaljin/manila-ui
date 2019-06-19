@@ -27,7 +27,6 @@ from manila_ui.api import manila
 from manila_ui.dashboards.project.shares.snapshots \
     import tables as snapshot_tables
 from manila_ui.dashboards import utils
-from openstack_dashboard.usage import quotas
 
 
 DELETABLE_STATES = (
@@ -72,8 +71,13 @@ class CreateShare(tables.LinkAction):
     policy_rules = (("share", "share:create"),)
 
     def allowed(self, request, share=None):
-        usages = quotas.tenant_quota_usages(request)
-        if usages['shares']['available'] <= 0:
+        usages = manila.tenant_absolute_limits(request)
+        shares_allowed = (usages['maxTotalShares'] >
+                          usages['totalSharesUsed'] and
+                          usages['maxTotalShareGigabytes'] >
+                          usages['totalShareGigabytesUsed'])
+        
+        if not shares_allowed:
             if "disabled" not in self.classes:
                 self.classes = [c for c in self.classes] + ['disabled']
                 self.verbose_name = string_concat(self.verbose_name, ' ',
